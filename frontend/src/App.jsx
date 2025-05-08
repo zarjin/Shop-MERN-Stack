@@ -1,19 +1,17 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import Home from "./pages/Home";
 import Navbar from "./components/Navbar";
-import Shop from "./pages/shop";
-
+import Shop from "./pages/Shop";
+import Register from "./pages/Register";
+import Login from "./pages/Login";
 export default function App() {
   return (
     <BrowserRouter>
       <Navbar />
-      <ToastContainer position="bottom-right" />
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/shop" element={<Shop />} />
+        <Route path="/" element={<Shop />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
       </Routes>
     </BrowserRouter>
   );
