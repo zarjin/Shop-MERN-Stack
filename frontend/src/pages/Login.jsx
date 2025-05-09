@@ -1,7 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function Login() {
+  const [fromData, setfromData] = useState({
+    email: "",
+    password: "",
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log("Form submitted");
@@ -27,6 +32,9 @@ export default function Login() {
             className="input validator mb-2"
             required
             placeholder="mail@site.com"
+            onChange={(e) =>
+              setfromData({ ...fromData, email: e.target.value })
+            }
           />
           <p className="validator-hint mb-3 text-sm text-gray-500">
             Enter a valid email address
@@ -45,6 +53,9 @@ export default function Login() {
             minLength="8"
             pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
             title="Must be more than 8 characters, including number, lowercase letter, uppercase letter"
+            onChange={(e) =>
+              setfromData({ ...fromData, password: e.target.value })
+            }
           />
           <p className="validator-hint mb-3 text-sm text-gray-500">
             Must be more than 8 characters, including:

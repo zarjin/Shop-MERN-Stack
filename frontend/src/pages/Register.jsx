@@ -1,11 +1,25 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import { useState, useContext } from 'react';
+import { UserContext } from '../context/UserContext';
+import { Link } from 'react-router-dom';
 
 export default function Register() {
+  const { registerUser } = useContext(UserContext);
+
+  const [fullName, setfullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [profilePicture, setProfilePicture] = useState(null);
+
+  const fromData = new FormData();
+  fromData.append('fullName', fullName);
+  fromData.append('email', email);
+  fromData.append('password', password);
+  fromData.append('profileImage', profilePicture);
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Form submitted");
-    // you can grab form values using e.target.elements or FormData here
+    console.log('Form submitted');
+    registerUser(fromData);
   };
 
   return (
@@ -25,6 +39,8 @@ export default function Register() {
             id="fullName"
             name="fullName"
             className="input validator mb-2"
+            value={fullName}
+            onChange={(e) => setfullName(e.target.value)}
             required
             placeholder="JohnDoe"
             pattern="[A-Za-z][A-Za-z0-9\-]*"
@@ -44,6 +60,8 @@ export default function Register() {
             id="email"
             name="email"
             className="input validator mb-2"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
             placeholder="mail@site.com"
           />
@@ -61,6 +79,8 @@ export default function Register() {
             className="input validator mb-2"
             required
             placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             minLength="8"
             pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
             title="Must be more than 8 characters, including number, lowercase letter, uppercase letter"
@@ -79,8 +99,9 @@ export default function Register() {
           </label>
           <input
             type="file"
-            id="avatar"
-            name="avatar"
+            id="profilePicture"
+            onChange={(e) => setProfilePicture(e.target.files[0])}
+            name="profilePicture"
             className="file-input mb-4"
             accept="image/*"
           />
@@ -93,7 +114,7 @@ export default function Register() {
           </button>
         </form>
         <p className="text-sm mt-4">
-          Already have an account?{" "}
+          Already have an account?{' '}
           <Link to="/login" className="text-blue-500 hover:underline">
             Login
           </Link>
