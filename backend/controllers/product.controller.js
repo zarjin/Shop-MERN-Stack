@@ -24,6 +24,18 @@ export const createProduct = async (req, res) => {
     });
 
     await newProduct.save();
+
+    // Get the populated product to send to clients
+    const populatedProduct = await productModels
+      .findById(newProduct._id)
+      .populate('createdBy');
+
+    // Emit socket event for real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('product:created', populatedProduct);
+    }
+
     res.status(201).json({
       message: 'Product created successfully',
       product: newProduct,
@@ -52,6 +64,18 @@ export const updateProduct = async (req, res) => {
     );
 
     await updateProduct.save();
+
+    // Get the populated product to send to clients
+    const populatedProduct = await productModels
+      .findById(updateProduct._id)
+      .populate('createdBy');
+
+    // Emit socket event for real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('product:updated', populatedProduct);
+    }
+
     res.status(201).json({
       message: 'Product Update successfully',
       product: updateProduct,
@@ -70,6 +94,12 @@ export const deleteProduct = async (req, res) => {
 
     if (!deleteProduct) {
       return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Emit socket event for real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('product:deleted', productId);
     }
 
     res.status(200).json({

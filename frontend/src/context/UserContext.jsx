@@ -11,8 +11,6 @@ export const UserProvider = ({ children }) => {
 
   const [user, setUser] = useState();
 
-  const [isAdmin, setIsAdmin] = useState(false);
-
   const registerUser = async (userData) => {
     try {
       const { data } = await axios.post(`${USER_API}/register`, userData, {
@@ -46,12 +44,14 @@ export const UserProvider = ({ children }) => {
       const { data } = await axios.get(`${USER_API}/logout`, {
         withCredentials: true,
       });
-      getUser();
-      isLoggedIn();
+      // First set the state directly for immediate UI update
       setLoggedIn(false);
+      setUser(null);
+      // Then check the server state
+      isLoggedIn();
       toast.success(data.message);
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || 'Logout failed');
     }
   };
 
@@ -61,9 +61,20 @@ export const UserProvider = ({ children }) => {
         withCredentials: true,
       });
       setLoggedIn(data.Authentication);
-      getUser();
+      if (data.Authentication) {
+        getUser();
+      } else {
+        setUser(null);
+      }
     } catch (error) {
-      toast.error(error.response.data.message);
+      setLoggedIn(false);
+      setUser(null);
+      // Only show error toast if it's not a 401 unauthorized error
+      if (error.response && error.response.status !== 401) {
+        toast.error(
+          error.response?.data?.message || 'Authentication check failed'
+        );
+      }
     }
   };
 
@@ -74,16 +85,27 @@ export const UserProvider = ({ children }) => {
       });
       setUser(data);
     } catch (error) {
-      toast.error(error.response.data.message);
+      setUser(null);
+      // Only show error toast if it's not a 401 unauthorized error
+      if (error.response && error.response.status !== 401) {
+        toast.error(
+          error.response?.data?.message || 'Failed to fetch user data'
+        );
+      }
     }
   };
 
   const Admin = async (userEmail) => {
     try {
-      const { data } = await axios.get(`${USER_API}/admin`, userEmail, {
-        withCredentials: true,
-      });
-      setIsAdmin(data.isAdmin);
+      const { data } = await axios.post(
+        `${USER_API}/admin`,
+        { email: userEmail },
+        {
+          withCredentials: true,
+        }
+      );
+
+      toast.success(data.message);
     } catch (error) {
       toast.error(error.response.data.message);
     }
@@ -102,7 +124,6 @@ export const UserProvider = ({ children }) => {
         loggedIn,
         user,
         Admin,
-        isAdmin,
       }}
     >
       {children}

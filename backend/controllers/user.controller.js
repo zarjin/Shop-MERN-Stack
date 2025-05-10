@@ -124,10 +124,18 @@ export const logout = async (req, res) => {
 
 export const checkAuthentication = async (req, res) => {
   try {
-    res.status(200).json({ Authentication: true });
+    // If we reach this point, it means the isAuthenticated middleware has already verified the token
+    // We can access the user ID from req.user which was set by the middleware
+    if (req.user && req.user.id) {
+      return res.status(200).json({ Authentication: true });
+    } else {
+      return res
+        .status(401)
+        .json({ Authentication: false, message: 'User not authenticated' });
+    }
   } catch (error) {
     console.error('Error checking authentication:', error);
-    res
+    return res
       .status(500)
       .json({ Authentication: false, error: 'Internal Server Error' });
   }
@@ -171,7 +179,7 @@ export const addCart = async (req, res) => {
     }
 
     // Get product ID from request parameters
-    const { productId } = req.params; // Fixed typo: pramas -> params
+    const { productId } = req.params;
     if (!productId) {
       return res
         .status(400)
@@ -179,14 +187,24 @@ export const addCart = async (req, res) => {
     }
 
     // Find user in database
-    const user = await userModels.findById(userId); // Assuming userModels is imported
+    const user = await userModels.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     // Add product to cart and save
     user.cartProduct.push(productId);
-    await user.save(); // Save the updated user document
+    await user.save();
+
+    // Get the product details for real-time update
+    const io = req.app.get('io');
+    if (io) {
+      // Emit to the specific user's socket
+      io.emit('cart:added', {
+        userId: userId,
+        productId: productId,
+      });
+    }
 
     // Send success response
     res.status(200).json({
@@ -208,7 +226,7 @@ export const removeCart = async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized: User not found' });
     }
 
-    const { productId } = req.params; // Destructure productId from params
+    const { productId } = req.params;
 
     if (!productId) {
       return res
@@ -229,6 +247,15 @@ export const removeCart = async (req, res) => {
 
     // Save the updated user
     await user.save();
+
+    // Emit socket event for real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('cart:removed', {
+        userId: userId,
+        productId: productId,
+      });
+    }
 
     return res.status(200).json({
       message: 'Product removed from cart successfully',
@@ -329,11 +356,45 @@ export const isAdmin = async (req, res) => {
     user.isAdmin = true;
     await user.save();
 
-    res
-      .status(200)
-      .json({ message: 'User promoted to admin successfully.', user });
+    // Emit socket event for real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('user:admin-updated', {
+        userId: user._id,
+        email: user.email,
+        isAdmin: true,
+      });
+    }
+
+    res.status(200).json({ message: 'User promoted to admin successfully.' });
   } catch (error) {
     console.error(error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Get all users (for admin panel)
+export const getAllUsers = async (req, res) => {
+  try {
+    // Check if the requesting user is an admin
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const requestingUser = await userModels.findById(userId);
+    if (!requestingUser || !requestingUser.isAdmin) {
+      return res
+        .status(403)
+        .json({ message: 'Forbidden: Admin access required' });
+    }
+
+    // Fetch all users
+    const users = await userModels.find().select('-password');
+
+    res.status(200).json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

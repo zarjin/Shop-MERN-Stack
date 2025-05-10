@@ -10,6 +10,7 @@ import {
   addFovProduct,
   removeFovProduct,
   isAdmin,
+  getAllUsers,
 } from '../controllers/user.controller.js';
 import isAuthenticated from '../middlewares/isAuthentication.middleware.js';
 import { profileStorage } from '../middlewares/upload.middleware.js';
@@ -35,7 +36,8 @@ userRouter.delete(
   removeFovProduct
 );
 
-// ✅ Admin Check Route
-userRouter.get('/admin', isAuthenticated, isAdmin);
+// ✅ Admin Routes
+userRouter.post('/admin', isAuthenticated, isAdmin);
+userRouter.get('/all', isAuthenticated, getAllUsers);
 
 export default userRouter;

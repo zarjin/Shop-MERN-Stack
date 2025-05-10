@@ -1,124 +1,264 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { UserContext } from '../context/UserContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 export default function Register() {
-  const { registerUser } = useContext(UserContext);
+  const { registerUser, loggedIn } = useContext(UserContext);
+  const navigate = useNavigate();
 
-  const [fullName, setfullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
   const [profilePicture, setProfilePicture] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
-  const fromData = new FormData();
-  fromData.append('fullName', fullName);
-  fromData.append('email', email);
-  fromData.append('password', password);
-  fromData.append('profileImage', profilePicture);
+  // Redirect if already logged in
+  useEffect(() => {
+    if (loggedIn) {
+      navigate('/');
+    }
+  }, [loggedIn, navigate]);
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = 'Full name is required';
+    } else if (formData.fullName.trim().length < 3) {
+      newErrors.fullName = 'Full name should be at least 3 characters';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password should be at least 8 characters';
+    } else if (!/(?=.*\d)(?=.*[a-z])(?=.*[A-Z])/.test(formData.password)) {
+      newErrors.password =
+        'Password must include at least one number, one lowercase letter, and one uppercase letter';
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (!profilePicture) {
+      newErrors.profilePicture = 'Profile picture is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted');
-    registerUser(fromData);
+
+    if (!validateForm()) {
+      toast.error('Please fix the errors in the form');
+      return;
+    }
+
+    setLoading(true);
+
+    const submitData = new FormData();
+    submitData.append('fullName', formData.fullName);
+    submitData.append('email', formData.email);
+    submitData.append('password', formData.password);
+    submitData.append('profileImage', profilePicture);
+
+    try {
+      await registerUser(submitData);
+      // Navigation will happen automatically due to the useEffect
+    } catch (error) {
+      console.error('Registration error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="w-full h-screen flex items-center justify-center">
-      <div className="w-96 rounded-lg shadow-lg p-6 flex flex-col items-center justify-center">
-        <h1 className="text-2xl font-bold mb-4">Register</h1>
+    <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-screen">
+      <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
+        <h1 className="text-2xl font-bold mb-6 text-center text-indigo-600">
+          Create an Account
+        </h1>
         <form
           className="flex flex-col w-full"
           onSubmit={handleSubmit}
           encType="multipart/form-data"
         >
-          <label className="mb-1 font-medium" htmlFor="fullName">
-            Full Name
-          </label>
-          <input
-            type="text"
-            id="fullName"
-            name="fullName"
-            className="input validator mb-2"
-            value={fullName}
-            onChange={(e) => setfullName(e.target.value)}
-            required
-            placeholder="JohnDoe"
-            pattern="[A-Za-z][A-Za-z0-9\-]*"
-            minLength="3"
-            maxLength="30"
-            title="Only letters, numbers or dash"
-          />
-          <p className="validator-hint mb-3 text-sm text-gray-500">
-            Must be 3 to 30 characters containing only letters, numbers or dash
-          </p>
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 font-medium mb-2"
+              htmlFor="fullName"
+            >
+              Full Name
+            </label>
+            <input
+              type="text"
+              id="fullName"
+              name="fullName"
+              className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                errors.fullName ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Enter your full name"
+              value={formData.fullName}
+              onChange={handleChange}
+            />
+            {errors.fullName && (
+              <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>
+            )}
+          </div>
 
-          <label className="mb-1 font-medium" htmlFor="email">
-            Email
-          </label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            className="input validator mb-2"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            placeholder="mail@site.com"
-          />
-          <p className="validator-hint mb-3 text-sm text-gray-500">
-            Enter a valid email address
-          </p>
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 font-medium mb-2"
+              htmlFor="email"
+            >
+              Email Address
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                errors.email ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Enter your email"
+              value={formData.email}
+              onChange={handleChange}
+            />
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+            )}
+          </div>
 
-          <label className="mb-1 font-medium" htmlFor="password">
-            Password
-          </label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            className="input validator mb-2"
-            required
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength="8"
-            pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-            title="Must be more than 8 characters, including number, lowercase letter, uppercase letter"
-          />
-          <p className="validator-hint mb-3 text-sm text-gray-500">
-            Must be more than 8 characters, including:
-            <br />
-            - At least one number
-            <br />
-            - At least one lowercase letter
-            <br />- At least one uppercase letter
-          </p>
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 font-medium mb-2"
+              htmlFor="password"
+            >
+              Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                errors.password ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Create a password"
+              value={formData.password}
+              onChange={handleChange}
+            />
+            {errors.password ? (
+              <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+            ) : (
+              <p className="text-gray-500 text-sm mt-1">
+                Password must be at least 8 characters with at least one number,
+                one lowercase and one uppercase letter
+              </p>
+            )}
+          </div>
 
-          <label className="mb-1 font-medium" htmlFor="avatar">
-            Profile Picture
-          </label>
-          <input
-            type="file"
-            id="profilePicture"
-            onChange={(e) => setProfilePicture(e.target.files[0])}
-            name="profilePicture"
-            className="file-input mb-4"
-            accept="image/*"
-          />
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 font-medium mb-2"
+              htmlFor="confirmPassword"
+            >
+              Confirm Password
+            </label>
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Confirm your password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+            />
+            {errors.confirmPassword && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.confirmPassword}
+              </p>
+            )}
+          </div>
+
+          <div className="mb-6">
+            <label
+              className="block text-gray-700 font-medium mb-2"
+              htmlFor="profilePicture"
+            >
+              Profile Picture
+            </label>
+            <input
+              type="file"
+              id="profilePicture"
+              name="profilePicture"
+              className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                errors.profilePicture ? 'border-red-500' : 'border-gray-300'
+              }`}
+              accept="image/*"
+              onChange={(e) => setProfilePicture(e.target.files[0])}
+            />
+            {errors.profilePicture && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.profilePicture}
+              </p>
+            )}
+            {profilePicture && (
+              <div className="mt-2">
+                <p className="text-sm text-gray-600">
+                  Selected: {profilePicture.name}
+                </p>
+              </div>
+            )}
+          </div>
 
           <button
             type="submit"
-            className="btn bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition"
+            disabled={loading}
+            className={`w-full bg-indigo-600 text-white py-3 px-4 rounded-md font-medium ${
+              loading
+                ? 'opacity-70 cursor-not-allowed'
+                : 'hover:bg-indigo-700 transition-colors duration-300'
+            }`}
           >
-            Register
+            {loading ? 'Creating Account...' : 'Register'}
           </button>
         </form>
-        <p className="text-sm mt-4">
-          Already have an account?{' '}
-          <Link to="/login" className="text-blue-500 hover:underline">
-            Login
-          </Link>
-        </p>
+
+        <div className="mt-6 text-center">
+          <p className="text-gray-600">
+            Already have an account?{' '}
+            <Link
+              to="/login"
+              className="text-indigo-600 hover:underline font-medium"
+            >
+              Login
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
