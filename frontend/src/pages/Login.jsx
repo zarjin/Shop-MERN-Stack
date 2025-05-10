@@ -1,16 +1,18 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useContext } from 'react';
+import { UserContext } from '../context/UserContext';
+import { Link } from 'react-router-dom';
 
 export default function Login() {
+  const { loginUser } = useContext(UserContext);
+
   const [fromData, setfromData] = useState({
-    email: "",
-    password: "",
+    email: '',
+    password: '',
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Form submitted");
-    // you can grab form values using e.target.elements or FormData here
+    loginUser(fromData);
   };
 
   return (
@@ -74,7 +76,7 @@ export default function Login() {
           </button>
         </form>
         <p className="text-sm mt-4">
-          Don't have an account?{" "}
+          Don't have an account?{' '}
           <Link to="/register" className="text-blue-500 hover:underline">
             Register
           </Link>
